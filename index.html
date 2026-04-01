@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本人健康状态检测站</title>
+<style>
+  :root {
+    --c-ex: #4CAF50; --c-gd: #FFC107; --c-wn: #FF9800; --c-rk: #FF6B35;
+    --c-pri: #2196F3; --c-bg: #F5F7FA; --c-card: #FFF;
+    --c-txt: #212121; --c-mut: #757575; --c-bdr: #E0E0E0;
+    --r: 12px; --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background: var(--c-bg); color: var(--c-txt); font-size: 15px; line-height: 1.6; }
+  @media(min-width:768px){ body { max-width: 480px; margin: 0 auto; } }
+
+  /* 顶栏 */
+  .topbar { position: sticky; top: 0; z-index: 100; background: var(--c-card); border-bottom: 1px solid var(--c-bdr); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-title { font-size: 16px; font-weight: 700; }
+  .date-nav { display: flex; align-items: center; gap: 12px; }
+  .date-nav button { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .date-nav button:hover { background: #eee; }
+  .date-nav span { font-size: 13px; color: var(--c-mut); min-width: 100px; text-align: center; }
+
+  /* 健康指数Banner */
+  .health-banner { margin: 16px; border-radius: var(--r); padding: 16px 24px; cursor: pointer; transition: all .3s; border: 1.5px solid; }
+  .health-banner:hover { box-shadow: var(--shadow); }
+  .hb-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .hb-score { font-size: 32px; font-weight: 800; }
+  .hb-label { display: inline-flex; align-items: center; gap: 4px; padding: 3px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #fff; }
+  .hb-trend { font-size: 13px; color: var(--c-mut); margin-top: 4px; }
+  .hb-bar { margin-top: 10px; background: #e0e0e0; border-radius: 8px; height: 8px; overflow: hidden; }
+  .hb-bar-fill { height: 100%; border-radius: 8px; transition: width .6s; }
+  .hb-hint { font-size: 12px; color: var(--c-pri); margin-top: 6px; text-align: right; }
+
+  /* 卡片通用 */
+  .card { margin: 0 16px 16px; background: var(--c-card); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+  .card-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: border-color .2s; }
+  .card-hd.open { border-bottom-color: var(--c-bdr); }
+  .card-hd-l { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+  .card-hd-r { display: flex; align-items: center; gap: 10px; color: var(--c-mut); font-size: 13px; }
+  .card-chev { font-size: 14px; transition: transform .25s; }
+  .card-chev.open { transform: rotate(180deg); }
+  .card-sum { font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-bd { padding: 16px; display: none; }
+  .card-bd.open { display: block; }
+
+  /* 字段行 */
+  .fld-label { font-weight: 500; margin-bottom: 6px; font-size: 14px; }
+
+  /* 时间输入 */
+  .time-grp { display: flex; gap: 16px; margin-bottom: 12px; }
+  .time-it { flex: 1; }
+  .time-lbl { font-size: 12px; color: var(--c-mut); margin-bottom: 4px; }
+  .time-in { width: 100%; height: 44px; border: 1.5px solid var(--c-bdr); border-radius: 8px; padding: 0 12px; font-size: 15px; outline: none; }
+  .time-in:focus { border-color: var(--c-pri); }
+  .sleep-res { padding: 10px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+
+  /* 饮食星级 */
+  .diet-btns { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .diet-btn { flex: 1; min-width: 80px; height: 52px; border: 2px solid var(--c-bdr); border-radius: 10px; cursor: pointer; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; gap: 2px; transition: all .2s; }
+  .diet-btn:hover { border-color: var(--c-gd); }
+  .diet-btn.active { border-color: var(--c-gd); background: #fff9e6; }
+  .diet-btn .stars { font-size: 14px; }
+  .diet-btn .lbl { font-size: 11px; color: var(--c-mut); }
+
+  /* 心情 */
+  .mood-grid { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .mood-btn { flex: 1; min-width: 56px; height: 64px; border: 2px solid var(--c-bdr); border-radius: 10px; cursor: pointer; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; gap: 4px; transition: all .2s; }
+  .mood-btn .emoji { font-size: 26px; }
+  .mood-btn .mt { font-size: 11px; color: var(--c-mut); }
+  .mood-btn:hover { border-color: var(--c-pri); background: #e3f2fd; }
+  .mood-btn.active { border-color: var(--c-pri); background: #e3f2fd; }
+
+  /* 运动 */
+  .ex-grp { display: flex; gap: 16px; margin-bottom: 12px; }
+  .ex-it { flex: 1; }
+  .ex-lbl { font-size: 12px; color: var(--c-mut); margin-bottom: 4px; }
+  .ex-sub { font-size: 11px; color: #bbb; margin-top: 2px; }
+  .stepper { display: flex; align-items: center; border: 1.5px solid var(--c-bdr); border-radius: 8px; overflow: hidden; height: 44px; }
+  .step-btn { width: 42px; height: 100%; border: none; background: #f5f5f5; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .step-btn:hover { background: #e0e0e0; }
+  .step-val { flex: 1; text-align: center; font-size: 16px; font-weight: 600; border: none; outline: none; background: transparent; -moz-appearance: textfield; }
+  .step-val::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .ex-total { padding: 10px 14px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+  /* BMI */
+  .bmi-bar { position: relative; height: 12px; border-radius: 6px; margin: 10px 0 6px; overflow: visible; }
+  .bmi-track { height: 100%; border-radius: 6px; background: linear-gradient(to right, #64b5f6 0%, #4CAF50 28%, #FFC107 52%, #FF6B35 100%); }
+  .bmi-ptr { position: absolute; top: -2px; transform: translateX(-50%); font-size: 16px; line-height: 1; transition: left .3s; }
+  .bmi-lbls { display: flex; justify-content: space-between; font-size: 11px; color: var(--c-mut); }
+
+  /* 体重输入 */
+  .wt-row { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--c-bdr); }
+  .wt-right { display: flex; align-items: center; gap: 8px; }
+  .wt-in { width: 90px; height: 40px; border: 1.5px solid var(--c-bdr); border-radius: 8px; text-align: center; font-size: 15px; outline: none; }
+  .wt-in:focus { border-color: var(--c-pri); }
+  .wt-unit { font-size: 13px; color: var(--c-mut); }
+
+  /* 高级折叠 */
+  .adv-tog { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding: 10px; border: 1.5px dashed var(--c-bdr); border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--c-mut); transition: all .2s; }
+  .adv-tog:hover { border-color: var(--c-pri); color: var(--c-pri); }
+  .adv-bd { display: none; margin-top: 8px; }
+  .adv-bd.open { display: block; }
+
+  /* 围度输入 */
+  .meas-row { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 8px 0; border-bottom: 1px solid var(--c-bdr); }
+  .meas-row:last-child { border-bottom: none; }
+  .meas-in { width: 80px; height: 38px; border: 1.5px solid var(--c-bdr); border-radius: 8px; text-align: center; font-size: 15px; outline: none; }
+  .meas-in:focus { border-color: var(--c-pri); }
+
+  /* 本周汇总 */
+  .week-sum { padding: 12px 0; font-size: 13px; color: var(--c-mut); border-bottom: 1px solid var(--c-bdr); line-height: 1.8; }
+
+  /* 建议卡片 */
+  .adv-card { border-radius: 10px; padding: 14px; border-left: 4px solid; margin-bottom: 8px; }
+  .adv-card.ok { background: #f0f9eb; border-left-color: var(--c-ex); }
+  .adv-card.warn { background: #fff8e1; border-left-color: var(--c-wn); }
+  .adv-title { font-weight: 700; margin-bottom: 6px; }
+  .adv-text { font-size: 13px; line-height: 1.7; }
+  .adv-ref { font-size: 12px; color: var(--c-pri); margin-top: 6px; }
+  .adv-action { display: flex; align-items: center; gap: 8px; margin: 12px 0; background: var(--c-pri); color: #fff; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; width: 100%; justify-content: center; }
+  .adv-action:hover { opacity: .9; }
+
+  /* 待办 */
+  .todo-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid var(--c-bdr); }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-ck { width: 22px; height: 22px; border: 2px solid var(--c-bdr); border-radius: 6px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all .2s; }
+  .todo-ck.done { background: var(--c-ex); border-color: var(--c-ex); color: #fff; }
+  .todo-tx { flex: 1; font-size: 14px; }
+  .todo-tx.done { text-decoration: line-through; color: var(--c-mut); }
+  .todo-del { background: none; border: none; font-size: 16px; cursor: pointer; color: #ccc; padding: 4px; }
+  .todo-del:hover { color: #f44336; }
+  .add-todo { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .add-todo-in { flex: 1; height: 40px; border: 1.5px solid var(--c-bdr); border-radius: 8px; padding: 0 12px; font-size: 14px; outline: none; }
+  .add-todo-in:focus { border-color: var(--c-pri); }
+  .add-todo-btn { height: 40px; padding: 0 16px; background: var(--c-pri); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .prog-bar { background: #eee; border-radius: 6px; height: 8px; overflow: hidden; margin: 6px 0; }
+  .prog-fill { height: 100%; border-radius: 6px; background: var(--c-pri); transition: width .4s; }
+
+  /* 趋势图 */
+  .chart-wrap { margin: 16px 0; }
+  .chart-wrap canvas { width: 100%; height: 100px; display: block; }
+
+  /* 日记/事件 */
+  .diary-area { width: 100%; border: 1.5px solid var(--c-bdr); border-radius: 10px; padding: 12px; font-size: 14px; font-family: inherit; resize: none; min-height: 80px; outline: none; line-height: 1.7; }
+  .diary-area:focus { border-color: var(--c-pri); }
+  .save-btn { margin-top: 8px; width: 100%; height: 44px; background: transparent; border: 1.5px solid var(--c-pri); color: var(--c-pri); border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .save-btn:hover { background: var(--c-pri); color: #fff; }
+
+  /* 连续记录 */
+  .streak { display: inline-flex; align-items: center; gap: 6px; background: #fff3e0; color: #e65100; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+
+  /* 弹窗 */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal-sheet { background: var(--c-card); border-radius: 20px 20px 0 0; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 24px 16px; animation: slideUp .3s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 40px; height: 4px; background: #ddd; border-radius: 4px; margin: 0 auto 16px; }
+  .modal-close { float: right; font-size: 20px; cursor: pointer; color: var(--c-mut); background: none; border: none; }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .dim-row { margin: 12px 0; }
+  .dim-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+  .dim-bar { height: 8px; border-radius: 6px; background: #eee; overflow: hidden; }
+  .dim-fill { height: 100%; border-radius: 6px; transition: width .5s; }
+  .weak-tag { font-size: 11px; color: var(--c-wn); font-weight: 600; }
+
+  /* 身高设置弹窗 */
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--c-bdr); }
+  .setting-input { width: 80px; height: 38px; border: 1.5px solid var(--c-bdr); border-radius: 8px; text-align: center; font-size: 15px; outline: none; }
+  .setting-input:focus { border-color: var(--c-pri); }
+  .setting-save { width: 100%; height: 46px; background: var(--c-pri); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 24px; border-radius: 24px; font-size: 14px; z-index: 999; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  .safe-bottom { height: 24px; }
+  .section { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="topbar">
+  <span style="font-size:18px;cursor:pointer;" onclick="openSettings()">⚙️</span>
+  <span class="topbar-title">本人健康状态检测站</span>
+  <div class="date-nav">
+    <button onclick="changeDate(-1)">◀</button>
+    <span id="dateLabel">今天</span>
+    <button onclick="changeDate(1)">▶</button>
+  </div>
+</div>
+
+<!-- 健康指数Banner -->
+<div class="health-banner" id="healthBanner" onclick="openModal()">
+  <div class="hb-top">
+    <div><span class="hb-score" id="hbScore">0</span><span style="font-size:16px;color:#757575;"> / 100</span> <span id="hbTrend" style="font-size:16px;margin-left:6px;"></span></div>
+    <span class="hb-label" id="hbLabel">—</span>
+  </div>
+  <div class="hb-trend" id="hbTrendText"></div>
+  <div class="hb-bar"><div class="hb-bar-fill" id="hbBar"></div></div>
+  <div class="hb-hint">点击查看详细分析 →</div>
+</div>
+
+<!-- 卡片1：今日记录 -->
+<div class="card">
+  <div class="card-hd open" onclick="toggleCard('c1')">
+    <div class="card-hd-l">📋 今日记录</div>
+    <div class="card-hd-r"><span class="card-sum" id="c1sum"></span><span class="card-chev open" id="c1chev">▼</span></div>
+  </div>
+  <div class="card-bd open" id="c1bd">
+    <!-- 睡眠 -->
+    <div class="section">
+      <div class="fld-label">🌙 睡眠</div>
+      <div class="time-grp">
+        <div class="time-it"><div class="time-lbl">入睡时间</div><input class="time-in" type="time" id="inSleepS" value="23:00" onchange="onSleepChange()"></div>
+        <div class="time-it"><div class="time-lbl">起床时间</div><input class="time-in" type="time" id="inSleepE" value="07:00" onchange="onSleepChange()"></div>
+      </div>
+      <div class="sleep-res" id="sleepRes">💤 睡眠时长：8.0 小时</div>
+    </div>
+    <!-- 饮食 -->
+    <div class="section">
+      <div class="fld-label">🥗 饮食质量</div>
+      <div class="diet-btns" id="dietBtns"></div>
+    </div>
+    <!-- 运动 -->
+    <div class="section">
+      <div class="fld-label">🏃 运动记录</div>
+      <div class="ex-grp">
+        <div class="ex-it"><div class="ex-lbl">中等强度</div><div class="stepper"><button class="step-btn" onclick="step('exMod',-15)">－</button><input class="step-val" type="number" id="exMod" value="0" min="0" step="15" onchange="onExChange()"><button class="step-btn" onclick="step('exMod',15)">＋</button></div><div class="ex-sub">快走·瑜伽·骑行</div></div>
+        <div class="ex-it"><div class="ex-lbl">高强度</div><div class="stepper"><button class="step-btn" onclick="step('exHigh',-10)">－</button><input class="step-val" type="number" id="exHigh" value="0" min="0" step="10" onchange="onExChange()"><button class="step-btn" onclick="step('exHigh',10)">＋</button></div><div class="ex-sub">跑步·HIIT·跳绳</div></div>
+      </div>
+      <div class="ex-total" id="exTotal">🏃 今日总计：0分钟（目标30分钟）</div>
+    </div>
+    <!-- 心情 -->
+    <div class="section">
+      <div class="fld-label">😊 今日心情</div>
+      <div class="mood-grid" id="moodBtns"></div>
+    </div>
+    <div class="streak" id="streak1"></div>
+  </div>
+</div>
+
+<!-- 卡片2：身体信号 -->
+<div class="card">
+  <div class="card-hd" onclick="toggleCard('c2')">
+    <div class="card-hd-l">📊 身体信号</div>
+    <div class="card-hd-r"><span class="card-sum" id="c2sum"></span><span class="card-chev" id="c2chev">▼</span></div>
+  </div>
+  <div class="card-bd" id="c2bd">
+    <!-- 体重 -->
+    <div class="wt-row">
+      <div class="fld-label" style="margin-bottom:0">⚖️ 体重</div>
+      <div class="wt-right">
+        <span id="wtDiff" style="font-size:13px;"></span>
+        <input class="wt-in" type="number" id="inWeight" step="0.1" placeholder="65.0" onchange="onWeightChange()">
+        <span class="wt-unit">kg</span>
+      </div>
+    </div>
+    <!-- BMI -->
+    <div style="padding:12px 0; border-bottom:1px solid var(--c-bdr);">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><div class="fld-label" style="margin-bottom:0">📐 BMI</div><span style="font-size:20px;font-weight:700;" id="bmiVal">—</span></div>
+      <div class="bmi-bar"><div class="bmi-track"></div><div class="bmi-ptr" id="bmiPtr">▲</div></div>
+      <div class="bmi-lbls"><span>偏瘦</span><span>正常</span><span>超重</span><span>肥胖</span></div>
+      <div style="font-size:12px;color:var(--c-mut);margin-top:4px;" id="bmiCat"></div>
+    </div>
+    <!-- 本周汇总 -->
+    <div class="week-sum" id="weekSum"></div>
+    <!-- 高级 -->
+    <div class="adv-tog" id="advTog" onclick="toggleAdv()"><span id="advIcon">⊕</span><span id="advTxt">高级模式（记录围度）</span></div>
+    <div class="adv-bd" id="advBd">
+      <div class="meas-row"><div class="fld-label" style="margin:0">📏 胸围</div><input class="meas-in" type="number" id="inChest" step="0.1" placeholder="— cm" onchange="onMeasureChange()"><span style="font-size:13px;color:var(--c-mut)">cm</span></div>
+      <div class="meas-row"><div class="fld-label" style="margin:0">📏 腰围</div><input class="meas-in" type="number" id="inWaist" step="0.1" placeholder="— cm" onchange="onMeasureChange()"><span style="font-size:13px;color:var(--c-mut)">cm</span></div>
+      <div class="meas-row"><div class="fld-label" style="margin:0">📏 臀围</div><input class="meas-in" type="number" id="inHip" step="0.1" placeholder="— cm" onchange="onMeasureChange()"><span style="font-size:13px;color:var(--c-mut)">cm</span></div>
+      <div style="font-size:12px;color:var(--c-mut);padding:8px 0;" id="measDate"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 卡片3：今日行动 -->
+<div class="card">
+  <div class="card-hd" onclick="toggleCard('c3')">
+    <div class="card-hd-l">⚡ 今日行动</div>
+    <div class="card-hd-r"><span class="card-sum" id="c3sum"></span><span class="card-chev" id="c3chev">▼</span></div>
+  </div>
+  <div class="card-bd" id="c3bd">
+    <!-- 建议 -->
+    <div id="adviceArea"></div>
+    <button class="adv-action" id="btnAddAdvice" onclick="addAdviceTodo()">✅ 将建议设为今日任务</button>
+    <!-- 待办 -->
+    <div style="margin-top:16px;">
+      <div style="font-weight:700;margin-bottom:8px;">✅ 今日待办</div>
+      <div id="todoList"></div>
+      <div class="add-todo"><input class="add-todo-in" placeholder="添加新待办…" id="newTodoIn" onkeydown="if(event.key==='Enter')addTodo()"><button class="add-todo-btn" onclick="addTodo()">＋</button></div>
+      <div style="margin-top:8px;font-size:13px;color:var(--c-mut);" id="todoProg"></div>
+      <div class="prog-bar"><div class="prog-fill" id="todoBar"></div></div>
+    </div>
+    <!-- 趋势图 -->
+    <div class="chart-wrap"><div style="font-weight:700;margin-bottom:8px;">📈 近7天健康指数</div><canvas id="chartCanvas" height="100"></canvas></div>
+    <!-- 成功日记 -->
+    <div style="margin-top:16px;">
+      <div style="font-weight:700;margin-bottom:8px;">📖 今日成功日记</div>
+      <textarea class="diary-area" placeholder="记录今天的一个小成就…" id="diaryArea" onchange="saveDay()"></textarea>
+      <button class="save-btn" onclick="saveDay();toast('日记已保存')">保存日记</button>
+    </div>
+    <!-- 关键事件 -->
+    <div style="margin-top:16px;">
+      <div style="font-weight:700;margin-bottom:8px;">🎯 今日关键事件</div>
+      <textarea class="diary-area" placeholder="记录今日最重要的事…" id="eventArea" style="height:64px;" onchange="saveDay()"></textarea>
+    </div>
+    <div class="streak" id="streak2"></div>
+  </div>
+</div>
+
+<div class="safe-bottom"></div>
+
+<!-- 健康指数弹窗 -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">📊 健康指数详细分析</div>
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:48px;font-weight:900;" id="mScore">0</div>
+      <div id="mLevel" style="margin-top:4px;"></div>
+      <div style="font-size:13px;color:var(--c-mut);margin-top:8px;" id="mCompare"></div>
+    </div>
+    <div style="margin:16px 0;">
+      <div style="font-weight:700;margin-bottom:12px;">维度分析</div>
+      <div id="mDims"></div>
+    </div>
+    <div style="margin-top:16px;" id="mAdvice"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button style="flex:1;height:46px;border:1.5px solid var(--c-pri);background:transparent;color:var(--c-pri);border-radius:10px;font-size:14px;cursor:pointer;" onclick="closeModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-bg" id="setBg" onclick="if(event.target===this)closeSettings()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeSettings()">✕</button>
+    <div class="modal-title">⚙️ 基础设置</div>
+    <div style="color:var(--c-mut);font-size:13px;margin-bottom:16px;">设置一次即可，数据会自动保存</div>
+    <div class="setting-row"><span class="fld-label" style="margin:0">📏 身高</span><div style="display:flex;align-items:center;gap:6px;"><input class="setting-input" type="number" id="inHeight" step="0.1"><span style="font-size:13px;color:var(--c-mut)">cm</span></div></div>
+    <button class="setting-save" onclick="saveSettings()">保存设置</button>
+    <div style="margin-top:24px;"><button style="width:100%;height:44px;background:#f5f5f5;border:none;border-radius:10px;font-size:14px;cursor:pointer;color:#f44336;" onclick="if(confirm('确定要清除所有数据吗？此操作不可恢复！')){localStorage.clear();location.reload();}">🗑️ 清除所有数据</button></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== 模块0：数据存储 ====================
+const STORE_KEY = 'health_tracker';
+const SETTINGS_KEY = 'health_settings';
+
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function saveSettingsData(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+function getAllDays() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+}
+function getDay(dateKey) {
+  const all = getAllDays();
+  return all[dateKey] || createEmptyDay();
+}
+function saveDayData(dateKey, data) {
+  const all = getAllDays();
+  all[dateKey] = data;
+  localStorage.setItem(STORE_KEY, JSON.stringify(all));
+}
+function createEmptyDay() {
+  return { sleepS:'', sleepE:'', sleepH:0, diet:0, exMod:0, exHigh:0, mood:'', weight:0, chest:0, waist:0, hip:0, todos:[], diary:'', event:'', ts: Date.now() };
+}
+
+function todayKey() { return fmtKey(new Date()); }
+function fmtKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseKey(k) { const p=k.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+
+let currentDate = todayKey();
+let currentData = null;
+
+// ==================== 模块1：评分计算 ====================
+function scoreSleep(h) {
+  if (h <= 0) return 0;
+  if (h < 6) return 12;
+  if (h < 6.5) return 15;
+  if (h < 7) return 18;
+  if (h <= 8.9) return 25;
+  return 20;
+}
+function scoreDiet(stars) { return {3:10, 4:15, 5:25}[stars] || 0; }
+function scoreBmi(h, w) {
+  if (!h || !w) return 0;
+  const bmi = w / Math.pow(h/100, 2);
+  if (bmi < 18.5) return 10;
+  if (bmi <= 23.9) return 25;
+  if (bmi <= 27.9) return 15;
+  return 5;
+}
+function scoreExercise(mod, high) {
+  if (mod===0 && high===0) return 0;
+  const eq = mod + high * 2;
+  return Math.min(25, Math.floor(eq / 15) * 5);
+}
+function calcBmi(h, w) { return h && w ? w / Math.pow(h/100, 2) : 0; }
+function bmiCategory(bmi) {
+  if (bmi < 18.5) return '偏瘦';
+  if (bmi <= 23.9) return '正常';
+  if (bmi <= 27.9) return '超重';
+  return '肥胖';
+}
+
+function calcScores(d) {
+  const s = getSettings();
+  const h = parseFloat(s.height) || 0;
+  const w = parseFloat(d.weight) || 0;
+  const sleep = scoreSleep(d.sleepH);
+  const diet = scoreDiet(d.diet);
+  const bmi = scoreBmi(h, w);
+  const exercise = scoreExercise(d.exMod||0, d.exHigh||0);
+  const total = sleep + diet + bmi + exercise;
+  let level, color, icon;
+  if (total >= 85) { level='优秀'; color='var(--c-ex)'; icon='🟢'; }
+  else if (total >= 70) { level='良好'; color='var(--c-gd)'; icon='🟡'; }
+  else if (total >= 55) { level='需关注'; color='var(--c-wn)'; icon='🟠'; }
+  else { level='高风险'; color='var(--c-rk)'; icon='🔴'; }
+  const dims = [{k:'sleep',label:'🌙 睡眠',v:sleep},{k:'diet',label:'🥗 饮食',v:diet},{k:'bmi',label:'⚖️ BMI',v:bmi},{k:'exercise',label:'🏃 运动',v:exercise}];
+  const minDim = dims.reduce((a,b) => a.v < b.v ? a : b);
+  return { total, level, color, icon, dims, minDim, sleep, diet, bmi, exercise, bmiVal: calcBmi(h,w) };
+}
+
+// ==================== 模块2：建议生成 ====================
+const ADVICE_DB = [
+  { cond: s=>s.total>=85, level:'优秀', color:'var(--c-ex)',
+    text:'您已优于大多数同龄人！保持当前生活方式，关注短板巩固。',
+    ref:'参考《健康中国2030》',
+    tips:['📚《你是你吃出来的》：每天摄入5种颜色蔬果，维持优秀状态。','💡 每天30分钟有氧运动可降低30%慢性病风险。'] },
+  { cond: s=>s.total>=70, level:'良好', color:'var(--c-gd)',
+    text:'整体良好，可微调1-2项。运动或饮食有提升空间。',
+    ref:'WHO《全球身体活动指南》2020',
+    tips:['📚《运动改造大脑》：每周3次、每次45分钟运动可改善记忆力和情绪。','💡 餐前喝水替代含糖饮料，控糖效果立竿见影。'] },
+  { cond: s=>s.total>=55, level:'需关注', color:'var(--c-wn)',
+    text:'健康需关注，建议优先改善最弱的2个维度。',
+    ref:'参考《中国居民膳食指南（2023）》',
+    tips:['📚《控糖革命》：减糖一周内精力会有明显提升。','💡 固定睡眠时间比单纯延长时长更重要。'] },
+  { cond: s=>true, level:'高风险', color:'var(--c-rk)',
+    text:'多项健康指标处于高风险！建议从最小可行行动开始。',
+    ref:'参考《慢性病防治核心信息》',
+    tips:['📚《你是你吃出来的》：彩虹饮食法——每天吃5种颜色蔬果。','💡 每天步行10分钟即可激活血液循环。'] }
+];
+
+function getAdvice(scores) {
+  const base = ADVICE_DB.find(a => a.cond(scores));
+  const weakTips = [];
+  if (scores.sleep < 15) weakTips.push('🌙 Tip：睡前1小时远离蓝光屏幕，可提升30%睡眠质量。');
+  if (scores.diet < 15) weakTips.push('🥗 Tip：用蒸煮替代煎炸，减少50%油脂摄入。');
+  if (scores.bmi < 15) weakTips.push('⚖️ Tip：每天记录体重，一周波动超过2kg需警惕。');
+  if (scores.exercise < 15) weakTips.push('🏃 Tip：碎片化运动有效：楼梯代替电梯，站立工作代替久坐。');
+  const allTips = [...base.tips, ...weakTips.slice(0,1)];
+  return { ...base, tips: [...new Set(allTips)].slice(0,2) };
+}
+
+// ==================== 模块3：UI渲染 ====================
+function renderAll() {
+  currentData = getDay(currentDate);
+  const scores = calcScores(currentData);
+  const advice = getAdvice(scores);
+  const s = getSettings();
+
+  // 日期
+  const isToday = currentDate === todayKey();
+  const d = parseKey(currentDate);
+  const weekNames = ['周日','周一','周二','周三','周四','周五','周六'];
+  document.getElementById('dateLabel').textContent = isToday ? '今天' : (d.getMonth()+1)+'/'+d.getDate()+' '+weekNames[d.getDay()];
+
+  // 健康指数Banner
+  const banner = document.getElementById('healthBanner');
+  banner.style.background = `linear-gradient(135deg, ${hexFromVar(advice.color)}15 0%, ${hexFromVar(advice.color)}08 100%)`;
+  banner.style.borderColor = hexFromVar(advice.color) + '40';
+  document.getElementById('hbScore').textContent = scores.total;
+  document.getElementById('hbScore').style.color = advice.color;
+  document.getElementById('hbBar').style.width = scores.total + '%';
+  document.getElementById('hbBar').style.background = advice.color;
+  document.getElementById('hbLabel').textContent = advice.icon + ' ' + advice.level;
+  document.getElementById('hbLabel').style.background = advice.color;
+
+  // 趋势
+  const yesterdayKey = fmtKey(new Date(parseKey(currentDate).getTime() - 86400000));
+  const yData = getDay(yesterdayKey);
+  const yScores = calcScores(yData);
+  const diff = scores.total - yScores.total;
+  if (yScores.total > 0) {
+    document.getElementById('hbTrend').textContent = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+    document.getElementById('hbTrend').style.color = diff > 0 ? 'var(--c-ex)' : diff < 0 ? 'var(--c-rk)' : 'var(--c-mut)';
+    document.getElementById('hbTrendText').textContent = `较${isToday?'昨日':'前一天'} ${diff>0?'+':''}${diff}分`;
+  } else {
+    document.getElementById('hbTrend').textContent = '';
+    document.getElementById('hbTrendText').textContent = '';
+  }
+
+  // 近7天趋势文本
+  const last7 = getLast7Scores();
+  if (last7.length > 1) {
+    document.getElementById('hbTrendText').textContent += '  近7天：' + last7.join(' → ');
+  }
+
+  // 卡片1摘要
+  const moodEmoji = { '愉悦':'😊','平静':'😐','低落':'😔','难过':'😢','愤怒':'😡' };
+  const parts1 = [];
+  if (currentData.sleepH > 0) parts1.push('🛌'+currentData.sleepH+'h');
+  if (currentData.diet) parts1.push('⭐'+currentData.diet+'星');
+  if ((currentData.exMod||0)+(currentData.exHigh||0)>0) parts1.push('🏃'+((currentData.exMod||0)+(currentData.exHigh||0))+'min');
+  if (currentData.mood) parts1.push((moodEmoji[currentData.mood]||'') + currentData.mood);
+  document.getElementById('c1sum').textContent = parts1.join(' · ') || '暂无记录';
+
+  // 睡眠
+  document.getElementById('inSleepS').value = currentData.sleepS || '23:00';
+  document.getElementById('inSleepE').value = currentData.sleepE || '07:00';
+  const sr = document.getElementById('sleepRes');
+  if (currentData.sleepH > 0) {
+    const h = Math.floor(currentData.sleepH), m = Math.round((currentData.sleepH - h)*60);
+    sr.textContent = '💤 睡眠时长：' + (m>0 ? h+'小时'+m+'分' : h+'小时') + '（'+scores.sleep+'/25分）';
+    sr.style.background = hexFromVar(scores.sleep>=18?'var(--c-ex)':scores.sleep>=12?'#fff8e1':'#fff3e0');
+    sr.style.color = scores.sleep>=18?'var(--c-ex)':scores.sleep>=12?'var(--c-wn)':'var(--c-rk)';
+  } else {
+    sr.textContent = '💤 请设置入睡和起床时间';
+    sr.style.background = '#f5f5f5'; sr.style.color = 'var(--c-mut)';
+  }
+
+  // 饮食
+  renderDietBtns();
+
+  // 运动
+  document.getElementById('exMod').value = currentData.exMod || 0;
+  document.getElementById('exHigh').value = currentData.exHigh || 0;
+  const exTotal = (currentData.exMod||0)+(currentData.exHigh||0);
+  const exOk = exTotal >= 30;
+  const exEl = document.getElementById('exTotal');
+  exEl.textContent = '🏃 今日总计：'+exTotal+'分钟 '+(exOk?'✓ 达标':'（目标30分钟）');
+  exEl.style.background = exOk?'#e8f5e9':'#fff3e0';
+  exEl.style.color = exOk?'var(--c-ex)':'var(--c-wn)';
+
+  // 心情
+  renderMoodBtns();
+
+  // 连续记录
+  const streak = calcStreak();
+  const streakText = streak > 1 ? '🔥 已连续记录 '+streak+' 天' : (streak===1?'✨ 开始记录第1天':'');
+  document.getElementById('streak1').textContent = streakText;
+  document.getElementById('streak2').textContent = streakText;
+  document.getElementById('streak1').style.display = streakText?'inline-flex':'none';
+  document.getElementById('streak2').style.display = streakText?'inline-flex':'none';
+
+  // 卡片2摘要
+  const bmiVal = scores.bmiVal;
+  const parts2 = [];
+  if (currentData.weight) parts2.push('⚖️'+currentData.weight+'kg');
+  if (bmiVal) parts2.push('BMI '+bmiVal.toFixed(1));
+  document.getElementById('c2sum').textContent = parts2.join(' · ') || '暂无记录';
+
+  // 体重
+  document.getElementById('inWeight').value = currentData.weight || '';
+  const wDiff = calcWeightDiff();
+  const wDiffEl = document.getElementById('wtDiff');
+  if (wDiff !== null) {
+    wDiffEl.textContent = (wDiff>0?'+':'')+wDiff.toFixed(1)+'kg';
+    wDiffEl.style.color = wDiff<=0?'var(--c-ex)':'var(--c-rk)';
+  } else { wDiffEl.textContent = ''; }
+
+  // BMI
+  if (bmiVal > 0) {
+    document.getElementById('bmiVal').textContent = bmiVal.toFixed(1);
+    document.getElementById('bmiVal').style.color = scores.bmi>=25?'var(--c-ex)':scores.bmi>=12?'var(--c-gd)':'var(--c-rk)';
+    const ptrPos = Math.min(95, Math.max(5, ((bmiVal - 15) / 25) * 100));
+    document.getElementById('bmiPtr').style.left = ptrPos + '%';
+    document.getElementById('bmiCat').textContent = bmiCategory(bmiVal);
+  } else {
+    document.getElementById('bmiVal').textContent = '—';
+    document.getElementById('bmiVal').style.color = 'var(--c-mut)';
+    document.getElementById('bmiPtr').style.left = '50%';
+    document.getElementById('bmiCat').textContent = '请先设置身高和体重';
+  }
+
+  // 本周汇总
+  renderWeekSum();
+
+  // 围度
+  document.getElementById('inChest').value = currentData.chest || '';
+  document.getElementById('inWaist').value = currentData.waist || '';
+  document.getElementById('inHip').value = currentData.hip || '';
+  document.getElementById('measDate').textContent = currentData.chest||currentData.waist||currentData.hip ? '本次记录：'+currentDate : '';
+
+  // 卡片3
+  document.getElementById('c3sum').textContent = '💡建议已生成 · ✅'+countDoneTodos()+'/'+(currentData.todos?currentData.todos.length:0)+'完成';
+
+  // 建议
+  renderAdvice(advice, scores);
+
+  // 待办
+  renderTodos();
+
+  // 趋势图
+  drawChart();
+
+  // 日记 & 事件
+  document.getElementById('diaryArea').value = currentData.diary || '';
+  document.getElementById('eventArea').value = currentData.event || '';
+}
+
+function hexFromVar(v) {
+  const map = { 'var(--c-ex)':'#4CAF50', 'var(--c-gd)':'#FFC107', 'var(--c-wn)':'#FF9800', 'var(--c-rk)':'#FF6B35' };
+  return map[v] || '#999';
+}
+
+function renderDietBtns() {
+  const el = document.getElementById('dietBtns');
+  const opts = [{v:3,s:'⭐⭐⭐',l:'放纵餐'},{v:4,s:'⭐⭐⭐⭐',l:'有糖油'},{v:5,s:'⭐⭐⭐⭐⭐',l:'清淡均衡'}];
+  el.innerHTML = opts.map(o => `<div class="diet-btn${currentData.diet===o.v?' active':''}" onclick="setDiet(${o.v})"><span class="stars">${o.s}</span><span class="lbl">${o.l}</span></div>`).join('');
+}
+function renderMoodBtns() {
+  const el = document.getElementById('moodBtns');
+  const opts = [{e:'😊',l:'愉悦'},{e:'😐',l:'平静'},{e:'😔',l:'低落'},{e:'😢',l:'难过'},{e:'😡',l:'愤怒'}];
+  el.innerHTML = opts.map(o => `<div class="mood-btn${currentData.mood===o.l?' active':''}" onclick="setMood('${o.l}')"><span class="emoji">${o.e}</span><span class="mt">${o.l}</span></div>`).join('');
+}
+
+function renderAdvice(advice, scores) {
+  const area = document.getElementById('adviceArea');
+  area.innerHTML = `
+    <div class="adv-card ${scores.total>=70?'ok':'warn'}">
+      <div class="adv-title">💡 个性化建议</div>
+      <div class="adv-text">${advice.text}</div>
+      <div class="adv-ref">📘 ${advice.ref}</div>
+    </div>
+    ${advice.tips.map(t=>`<div class="adv-text" style="font-size:13px;color:#555;padding:4px 0;line-height:1.8;">${t}</div>`).join('')}
+  `;
+}
+
+function renderTodos() {
+  const list = document.getElementById('todoList');
+  const todos = currentData.todos || [];
+  if (todos.length === 0) { list.innerHTML = '<div style="color:var(--c-mut);font-size:13px;padding:8px 0;">暂无待办</div>'; }
+  else {
+    list.innerHTML = todos.map((t,i) => `<div class="todo-item"><div class="todo-ck${t.done?' done':''}" onclick="toggleTodo(${i})">${t.done?'✓':''}</div><div class="todo-tx${t.done?' done':''}">${esc(t.text)}</div><button class="todo-del" onclick="delTodo(${i})">×</button></div>`).join('');
+  }
+  const done = countDoneTodos();
+  const total = todos.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('todoProg').textContent = total ? `进度：${done}/${total} (${pct}%)` : '';
+  document.getElementById('todoBar').style.width = pct + '%';
+}
+function countDoneTodos() { return (currentData.todos||[]).filter(t=>t.done).length; }
+function esc(s) { return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderWeekSum() {
+  const all = getAllDays();
+  const today = parseKey(currentDate);
+  const dayOfWeek = today.getDay() || 7;
+  const weekStart = new Date(today.getTime() - (dayOfWeek-1)*86400000);
+  let sleepSum=0, sleepCnt=0, weightSum=0, weightCnt=0, dietCnt=0, dietSum=0;
+  for (let i=0; i<7; i++) {
+    const k = fmtKey(new Date(weekStart.getTime()+i*86400000));
+    const d = all[k];
+    if (d) {
+      if (d.sleepH > 0) { sleepSum += d.sleepH; sleepCnt++; }
+      if (d.weight > 0) { weightSum += d.weight; weightCnt++; }
+      if (d.diet >= 3) { dietSum += d.diet; dietCnt++; }
+    }
+  }
+  const lines = [];
+  if (sleepCnt) lines.push('本周平均睡眠：'+(sleepSum/sleepCnt).toFixed(1)+'h');
+  if (weightCnt) lines.push('本周平均体重：'+(weightSum/weightCnt).toFixed(1)+'kg');
+  if (dietCnt) lines.push('本周平均饮食：'+'⭐'.repeat(Math.round(dietSum/dietCnt)));
+  document.getElementById('weekSum').textContent = lines.length ? lines.join('  |  ') : '本周暂无数据';
+}
+
+function getLast7Scores() {
+  const scores = [];
+  for (let i=6; i>=0; i--) {
+    const d = new Date(parseKey(currentDate).getTime() - i*86400000);
+    const k = fmtKey(d);
+    const data = getDay(k);
+    const s = calcScores(data);
+    if (s.total > 0 || i===0) scores.push(s.total);
+  }
+  return scores;
+}
+
+function calcStreak() {
+  let streak = 0;
+  const d = new Date(parseKey(currentDate));
+  while (true) {
+    const k = fmtKey(d);
+    const data = getDay(k);
+    if (data.sleepH > 0 || data.diet > 0 || data.weight > 0 || (data.exMod||0)+(data.exHigh||0)>0 || data.mood) {
+      streak++;
+      d.setTime(d.getTime() - 86400000);
+    } else break;
+    if (streak > 365) break;
+  }
+  return streak;
+}
+
+function calcWeightDiff() {
+  const all = getAllDays();
+  const keys = Object.keys(all).sort().filter(k=>k<currentDate && all[k].weight>0);
+  if (keys.length === 0) return null;
+  const prev = all[keys[keys.length-1]].weight;
+  return Math.round((currentData.weight - prev)*10)/10;
+}
+
+function drawChart() {
+  const canvas = document.getElementById('chartCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth, H = 100;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const data = getLast7Scores();
+  if (data.length < 2) { ctx.fillStyle='#ddd'; ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('至少需要2天数据',W/2,H/2); return; }
+
+  const labels = [];
+  for (let i=6; i>=0; i--) {
+    const d = new Date(parseKey(currentDate).getTime()-i*86400000);
+    labels.push((d.getMonth()+1)+'/'+d.getDate());
+  }
+  const pad={l:10,r:10,t:10,b:20}, cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const mn=0, mx=100;
+  const pts = data.map((v,i) => [pad.l+i/(data.length-1)*cw, pad.t+ch*(1-(v-mn)/(mx-mn))]);
+
+  const grad = ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,'rgba(76,175,80,0.25)'); grad.addColorStop(1,'rgba(76,175,80,0)');
+  ctx.beginPath(); ctx.moveTo(pts[0][0],H-pad.b);
+  pts.forEach(p=>ctx.lineTo(p[0],p[1]));
+  ctx.lineTo(pts[pts.length-1][0],H-pad.b); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.forEach(p=>ctx.lineTo(p[0],p[1]));
+  ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; ctx.stroke();
+
+  pts.forEach((p,i) => { ctx.beginPath(); ctx.arc(p[0],p[1],3,0,Math.PI*2); ctx.fillStyle=i===pts.length-1?'#2196F3':'#4CAF50'; ctx.fill(); });
+
+  ctx.fillStyle='#bbb'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  labels.forEach((l,i)=>{ if(i<data.length) ctx.fillText(l,pts[i][0],H-4); });
+}
+
+// ==================== 弹窗 ====================
+function openModal() {
+  const scores = calcScores(currentData);
+  const advice = getAdvice(scores);
+  document.getElementById('mScore').textContent = scores.total;
+  document.getElementById('mScore').style.color = advice.color;
+  document.getElementById('mLevel').innerHTML = `<span class="hb-label" style="background:${hexFromVar(advice.color)}">${advice.icon} ${advice.level}</span>`;
+
+  const yKey = fmtKey(new Date(parseKey(currentDate).getTime()-86400000));
+  const yScores = calcScores(getDay(yKey));
+  const diff = scores.total - yScores.total;
+  document.getElementById('mCompare').textContent = yScores.total > 0 ? `较${currentDate===todayKey()?'昨日':'前一天'} ${diff>0?'+':''}${diff}分 ${diff>0?'↑':diff<0?'↓':'→'}` : '暂无对比数据';
+
+  document.getElementById('mDims').innerHTML = scores.dims.map(d => {
+    const isWeak = d.k === scores.minDim.k;
+    const barColor = d.v >= 18 ? 'var(--c-ex)' : d.v >= 12 ? 'var(--c-gd)' : 'var(--c-wn)';
+    return `<div class="dim-row"><div class="dim-top"><span>${d.label} ${isWeak?'<span class="weak-tag">⚠️ 最弱项</span>':''}</span><span>${d.v} / 25</span></div><div class="dim-bar"><div class="dim-fill" style="width:${d.v/25*100}%;background:${barColor}"></div></div></div>`;
+  }).join('');
+
+  document.getElementById('mAdvice').innerHTML = `
+    <div style="font-weight:700;margin-bottom:10px;">💡 个性化建议</div>
+    <div class="adv-card ${scores.total>=70?'ok':'warn'}"><div class="adv-text">${advice.text}</div><div class="adv-ref">📘 ${advice.ref}</div></div>
+    ${advice.tips.map(t=>`<div class="adv-text" style="font-size:13px;color:#555;padding:4px 0;line-height:1.8;">${t}</div>`).join('')}
+  `;
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+function openSettings() {
+  const s = getSettings();
+  document.getElementById('inHeight').value = s.height || '';
+  document.getElementById('setBg').classList.add('open');
+}
+function closeSettings() { document.getElementById('setBg').classList.remove('open'); }
+
+// ==================== 交互事件 ====================
+function saveDay() { saveDayData(currentDate, currentData); }
+
+function onSleepChange() {
+  const s = document.getElementById('inSleepS').value;
+  const e = document.getElementById('inSleepE').value;
+  if (!s || !e) return;
+  let [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+  let diff = (eh*60+em)-(sh*60+sm);
+  if (diff < 0) diff += 24*60;
+  currentData.sleepS = s; currentData.sleepE = e;
+  currentData.sleepH = Math.round(diff/60*10)/10;
+  saveDay(); renderAll();
+}
+
+function setDiet(v) { currentData.diet = v; saveDay(); renderAll(); }
+function setMood(v) { currentData.mood = v; saveDay(); renderAll(); }
+
+function step(id, delta) {
+  const el = document.getElementById(id);
+  el.value = Math.max(0, (parseInt(el.value)||0) + delta);
+  onExChange();
+}
+function onExChange() {
+  currentData.exMod = parseInt(document.getElementById('exMod').value)||0;
+  currentData.exHigh = parseInt(document.getElementById('exHigh').value)||0;
+  saveDay(); renderAll();
+}
+
+function onWeightChange() {
+  currentData.weight = parseFloat(document.getElementById('inWeight').value)||0;
+  saveDay(); renderAll();
+}
+function onMeasureChange() {
+  currentData.chest = parseFloat(document.getElementById('inChest').value)||0;
+  currentData.waist = parseFloat(document.getElementById('inWaist').value)||0;
+  currentData.hip = parseFloat(document.getElementById('inHip').value)||0;
+  saveDay(); renderAll();
+}
+
+function saveSettings() {
+  const h = parseFloat(document.getElementById('inHeight').value)||0;
+  if (h < 50 || h > 250) { toast('请输入有效的身高（50-250cm）'); return; }
+  saveSettingsData({ height: h });
+  closeSettings(); toast('设置已保存'); renderAll();
+}
+
+function toggleTodo(i) {
+  currentData.todos[i].done = !currentData.todos[i].done;
+  saveDay(); renderAll();
+}
+function delTodo(i) {
+  currentData.todos.splice(i, 1);
+  saveDay(); renderAll();
+}
+function addTodo() {
+  const input = document.getElementById('newTodoIn');
+  const val = input.value.trim();
+  if (!val) return;
+  if (!currentData.todos) currentData.todos = [];
+  currentData.todos.push({ text: val, done: false });
+  input.value = '';
+  saveDay(); renderAll();
+}
+function addAdviceTodo() {
+  const scores = calcScores(currentData);
+  const actions = { sleep:'保证7-8小时睡眠', diet:'今日改善饮食质量', bmi:'注意饮食控制体重', exercise:'快走30分钟' };
+  const task = actions[scores.minDim.k] || '改善健康指标';
+  if (!currentData.todos) currentData.todos = [];
+  currentData.todos.push({ text: task, done: false });
+  saveDay(); renderAll();
+  toast('已添加任务：' + task);
+}
+
+function toggleCard(id) {
+  const bd = document.getElementById(id+'bd');
+  const ch = document.getElementById(id+'chev');
+  const hd = bd.previousElementSibling;
+  const open = bd.classList.toggle('open');
+  ch.classList.toggle('open', open);
+  hd.classList.toggle('open', open);
+}
+function toggleAdv() {
+  const bd = document.getElementById('advBd');
+  const open = bd.classList.toggle('open');
+  document.getElementById('advIcon').textContent = open ? '⊖' : '⊕';
+  document.getElementById('advTxt').textContent = open ? '收起高级模式' : '高级模式（记录围度）';
+}
+
+function changeDate(delta) {
+  const d = parseKey(currentDate);
+  d.setTime(d.getTime() + delta * 86400000);
+  currentDate = fmtKey(d);
+  renderAll();
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2000);
+}
+
+// ==================== 初始化 ====================
+window.onload = () => {
+  // 首次使用初始化设置
+  const s = getSettings();
+  if (!s.height) { openSettings(); }
+  renderAll();
+};
+window.addEventListener('resize', drawChart);
+</script>
+</body>
+</html>
