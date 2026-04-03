@@ -437,34 +437,89 @@ function calcScores(d) {
 }
 
 // ==================== 模块2：建议生成 ====================
+// ==================== 书籍语录库 ====================
+const BOOK_QUOTES = [
+  { book:'《你是你吃出来的》', author:'夏萌', quotes:[
+    '食物是最好的药物，你每天吃进去的东西，决定了你是谁。',
+    '彩虹饮食法：每天摄入5种颜色蔬果，是最简单的抗衰老方式。',
+    '真正的健康饮食不是节食，而是让身体每天都得到它需要的营养。',
+    '每一口食物都是一次选择，选择健康，就是选择未来的自己。',
+    '肠道是人体第二大脑，好好喂养它，情绪和免疫力都会改变。',
+    '减少超加工食品，回归天然食材，是改善健康最有效的一步。',
+    '蛋白质是身体的建筑材料，每餐保证优质蛋白，精力才能持久。',
+  ]},
+  { book:'《控糖革命》', author:'Jessie Inchauspé', quotes:[
+    '血糖平稳是一切健康的基础，大脑、情绪、体重都受它控制。',
+    '先吃蔬菜再吃碳水，这一个顺序的改变，能让血糖峰值降低75%。',
+    '用餐后10分钟站立或步行，是最简单的控糖小动作。',
+    '早餐不吃甜食，全天的血糖曲线都会更平稳，精力更集中。',
+    '减糖一周内，你的皮肤、精力和睡眠质量都会有明显改善。',
+    '醋是天然的控糖神器，饭前一勺苹果醋能减缓血糖上升速度。',
+    '不是要你不吃糖，而是让你更聪明地吃，减少血糖过山车。',
+  ]},
+  { book:'《运动改造大脑》', author:'约翰·瑞迪', quotes:[
+    '运动是大脑最好的药，每次有氧运动后，专注力和记忆力都会提升。',
+    '每周3次、每次45分钟的有氧运动，抗抑郁效果与药物相当。',
+    '压力最大的时候，去跑步——运动能直接清除皮质醇这种压力激素。',
+    '运动会促进大脑生长因子BDNF分泌，它是让神经元生长的"肥料"。',
+    '不需要去健身房，快走30分钟就足以改变你的大脑化学环境。',
+    '久坐是新型慢性病，每小时起来活动5分钟，大脑效率提升40%。',
+    '运动前先热身10分钟，保护关节的同时也在唤醒大脑的注意力网络。',
+  ]},
+  { book:'《睡眠革命》', author:'尼克·利特尔黑尔斯', quotes:[
+    '睡眠不是奢侈品，是身体修复和记忆巩固的唯一时间窗口。',
+    '比睡眠时长更重要的是规律性——固定起床时间是调节生物钟的关键。',
+    '睡前90分钟远离屏幕蓝光，你的入睡时间会缩短一半。',
+    '深睡眠阶段，大脑会清除代谢废物，长期睡眠不足是认知退化的风险因素。',
+    '午后20分钟小睡，能恢复下午的专注力，相当于额外增加2小时工作效率。',
+    '卧室温度18-20℃、完全黑暗、安静，是深度睡眠的黄金三要素。',
+    '睡眠债无法靠周末补回来，最好的方式是每天保持一致的睡眠节律。',
+  ]},
+  { book:'《高效能人士的七个习惯》', author:'史蒂芬·柯维', quotes:[
+    '以终为始：每天开始前，先想清楚你最重要的事是什么。',
+    '要事第一：不要让紧急但不重要的事，挤占了重要但不紧急的健康投资。',
+    '身体是第七个习惯的基础——没有健康，其余六个习惯都无从谈起。',
+    '积极主动意味着：不管外部环境如何，你仍然可以选择自己的回应方式。',
+    '持续更新自己：身体、心智、精神、社交，四个维度缺一不可。',
+    '小赢积累大赢：每天坚持一个小小的健康行动，一年后你会判若两人。',
+    '在意志力之前先培养习惯，好习惯会让你不需要意志力就能坚持。',
+  ]},
+];
+
+// 按日期算出当天显示哪条语录（全部语录合并后按天轮转，不重复）
+function getDailyQuote(dateKey) {
+  const allQuotes = [];
+  BOOK_QUOTES.forEach(b => b.quotes.forEach(q => allQuotes.push({ book: b.book, author: b.author, quote: q })));
+  const d = parseKey(dateKey);
+  const dayNum = Math.floor(d.getTime() / 86400000);
+  return allQuotes[dayNum % allQuotes.length];
+}
+
 const ADVICE_DB = [
   { cond: s=>s.total>=85, level:'优秀', color:'var(--c-ex)',
     text:'您已优于大多数同龄人！保持当前生活方式，关注短板巩固。',
-    ref:'参考《健康中国2030》',
-    tips:['📚《你是你吃出来的》：每天摄入5种颜色蔬果，维持优秀状态。','💡 每天30分钟有氧运动可降低30%慢性病风险。'] },
+    tips:['💡 每天30分钟有氧运动可降低30%慢性病风险。','💡 保持规律作息，优秀状态才能可持续。'] },
   { cond: s=>s.total>=70, level:'良好', color:'var(--c-gd)',
-    text:'整体良好，可微调1-2项。运动或饮食有提升空间。',
-    ref:'WHO《全球身体活动指南》2020',
-    tips:['📚《运动改造大脑》：每周3次、每次45分钟运动可改善记忆力和情绪。','💡 餐前喝水替代含糖饮料，控糖效果立竿见影。'] },
+    text:'整体良好，可微调1-2项。运动或饮食仍有提升空间。',
+    tips:['💡 餐前喝水替代含糖饮料，控糖效果立竿见影。','💡 每周增加1次运动，良好可升级为优秀。'] },
   { cond: s=>s.total>=55, level:'需关注', color:'var(--c-wn)',
     text:'健康需关注，建议优先改善最弱的2个维度。',
-    ref:'参考《中国居民膳食指南（2023）》',
-    tips:['📚《控糖革命》：减糖一周内精力会有明显提升。','💡 固定睡眠时间比单纯延长时长更重要。'] },
+    tips:['💡 固定睡眠时间比单纯延长时长更重要。','💡 从一个小改变开始，不要试图一次改变所有事。'] },
   { cond: s=>true, level:'高风险', color:'var(--c-rk)',
     text:'多项健康指标处于高风险！建议从最小可行行动开始。',
-    ref:'参考《慢性病防治核心信息》',
-    tips:['📚《你是你吃出来的》：彩虹饮食法——每天吃5种颜色蔬果。','💡 每天步行10分钟即可激活血液循环。'] }
+    tips:['💡 每天步行10分钟即可激活血液循环，这是最低门槛的起点。','💡 记录本身就是改变的开始，坚持记录是第一步。'] }
 ];
 
 function getAdvice(scores) {
   const base = ADVICE_DB.find(a => a.cond(scores));
   const weakTips = [];
-  if (scores.sleep < 15) weakTips.push('🌙 Tip：睡前1小时远离蓝光屏幕，可提升30%睡眠质量。');
-  if (scores.diet < 15) weakTips.push('🥗 Tip：用蒸煮替代煎炸，减少50%油脂摄入。');
-  if (scores.bmi < 15) weakTips.push('⚖️ Tip：每天记录体重，一周波动超过2kg需警惕。');
-  if (scores.exercise < 15) weakTips.push('🏃 Tip：碎片化运动有效：楼梯代替电梯，站立工作代替久坐。');
-  const allTips = [...base.tips, ...weakTips.slice(0,1)];
-  return { ...base, tips: [...new Set(allTips)].slice(0,2) };
+  if (scores.sleep < 15) weakTips.push('🌙 睡前1小时远离蓝光屏幕，可提升30%睡眠质量。');
+  if (scores.diet < 15) weakTips.push('🥗 用蒸煮替代煎炸，减少50%油脂摄入。');
+  if (scores.bmi < 15) weakTips.push('⚖️ 每天记录体重，一周波动超过2kg需警惕。');
+  if (scores.exercise < 15) weakTips.push('🏃 碎片化运动有效：楼梯代替电梯，站立工作代替久坐。');
+  const tips = [...base.tips];
+  if (weakTips.length) tips.push(weakTips[0]);
+  return { ...base, tips: tips.slice(0, 2) };
 }
 
 // ==================== 模块3：UI渲染 ====================
@@ -623,13 +678,18 @@ function renderMoodBtns() {
 
 function renderAdvice(advice, scores) {
   const area = document.getElementById('adviceArea');
+  const q = getDailyQuote(currentDate);
   area.innerHTML = `
     <div class="adv-card ${scores.total>=70?'ok':'warn'}">
       <div class="adv-title">💡 个性化建议</div>
       <div class="adv-text">${advice.text}</div>
-      <div class="adv-ref">📘 ${advice.ref}</div>
     </div>
     ${advice.tips.map(t=>`<div class="adv-text" style="font-size:13px;color:#555;padding:4px 0;line-height:1.8;">${t}</div>`).join('')}
+    <div style="margin-top:14px;background:#f3f0ff;border-left:4px solid #7c4dff;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:11px;color:#7c4dff;font-weight:700;margin-bottom:6px;">📚 今日书摘 · ${q.book}</div>
+      <div style="font-size:14px;color:#333;line-height:1.8;font-style:italic;">"${q.quote}"</div>
+      <div style="font-size:11px;color:#9e9e9e;margin-top:6px;text-align:right;">—— ${q.author}</div>
+    </div>
   `;
 }
 
@@ -689,8 +749,8 @@ function renderEventList() {
   if (events.length === 0) {
     list.innerHTML = '<div style="color:var(--c-mut);font-size:13px;padding:8px 0;">暂无关键事件</div>';
   } else {
-    list.innerHTML = events.map(e =>
-      `<div class="todo-item"><div style="width:22px;height:22px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">🎯</div><div class="todo-tx">${esc(e)}</div></div>`
+    list.innerHTML = events.map((e, i) =>
+      `<div class="todo-item"><div style="width:22px;height:22px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">🎯</div><div class="todo-tx">${esc(e)}</div><button class="todo-del" onclick="delEvent(${i})">×</button></div>`
     ).join('');
   }
 }
@@ -702,6 +762,11 @@ function addEvent() {
   if (!currentData.events) currentData.events = [];
   currentData.events.push(val);
   input.value = '';
+  saveDay(); renderAll();
+}
+
+function delEvent(i) {
+  currentData.events.splice(i, 1);
   saveDay(); renderAll();
 }
 
@@ -751,10 +816,16 @@ function openModal() {
     return `<div class="dim-row"><div class="dim-top"><span>${d.label} ${isWeak?'<span class="weak-tag">⚠️ 最弱项</span>':''}</span><span>${d.v} / 25</span></div><div class="dim-bar"><div class="dim-fill" style="width:${d.v/25*100}%;background:${barColor}"></div></div></div>`;
   }).join('');
 
+  const q = getDailyQuote(currentDate);
   document.getElementById('mAdvice').innerHTML = `
     <div style="font-weight:700;margin-bottom:10px;">💡 个性化建议</div>
-    <div class="adv-card ${scores.total>=70?'ok':'warn'}"><div class="adv-text">${advice.text}</div><div class="adv-ref">📘 ${advice.ref}</div></div>
+    <div class="adv-card ${scores.total>=70?'ok':'warn'}"><div class="adv-text">${advice.text}</div></div>
     ${advice.tips.map(t=>`<div class="adv-text" style="font-size:13px;color:#555;padding:4px 0;line-height:1.8;">${t}</div>`).join('')}
+    <div style="margin-top:14px;background:#f3f0ff;border-left:4px solid #7c4dff;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:11px;color:#7c4dff;font-weight:700;margin-bottom:6px;">📚 今日书摘 · ${q.book}</div>
+      <div style="font-size:14px;color:#333;line-height:1.8;font-style:italic;">"${q.quote}"</div>
+      <div style="font-size:11px;color:#9e9e9e;margin-top:6px;text-align:right;">—— ${q.author}</div>
+    </div>
   `;
   document.getElementById('modalBg').classList.add('open');
 }
