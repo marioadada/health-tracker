@@ -708,6 +708,8 @@ function addEvent() {
 function drawChart() {
   // 趋势图已移除，保留此函数避免旧调用报错
 }
+
+function calcStreak() {
   let streak = 0;
   const d = new Date(parseKey(currentDate));
   while (true) {
